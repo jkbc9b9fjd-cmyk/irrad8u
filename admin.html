@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>irrad8u Admin</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:#0d0f14;color:#e2e8f0;min-height:100vh;font-size:14px}
+a{color:#4fd1c5;text-decoration:none}
+
+/* LOGIN */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.login-box{background:#151820;border:1px solid #252a3a;border-radius:10px;padding:40px;width:100%;max-width:360px}
+.login-box h1{font-size:18px;font-weight:600;margin-bottom:4px}
+.login-box p{color:#718096;font-size:13px;margin-bottom:24px}
+
+/* APP */
+#admin-app{display:none}
+.top-bar{background:#151820;border-bottom:1px solid #252a3a;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.top-bar-logo{font-family:monospace;font-size:13px;font-weight:700;color:#4fd1c5;letter-spacing:.1em}
+.tabs{display:flex;gap:4px}
+.tab{padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;color:#718096;border:none;background:none;transition:all .15s}
+.tab:hover,.tab.active{background:#1c2030;color:#e2e8f0}
+.btn-logout{padding:6px 12px;border:1px solid #252a3a;border-radius:6px;background:none;color:#718096;font-size:12px;cursor:pointer}
+.btn-logout:hover{border-color:#fc8181;color:#fc8181}
+
+.page{display:none;padding:28px 24px;max-width:1100px;margin:0 auto}
+.page.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.page-header h2{font-size:18px;font-weight:600}
+
+/* FIELDS */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:#718096;margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;background:#0d0f14;border:1px solid #252a3a;border-radius:6px;color:#e2e8f0;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}
+.field input:focus,.field select,.field textarea:focus{border-color:#4fd1c5}
+.field textarea{resize:vertical;min-height:80px}
+select option{background:#0d0f14}
+
+/* BUTTONS */
+.btn{padding:9px 18px;border:none;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-primary{background:#4fd1c5;color:#0d0f14}
+.btn-primary:hover{opacity:.9}
+.btn-danger{background:rgba(252,129,129,.15);color:#fc8181;border:1px solid rgba(252,129,129,.3)}
+.btn-danger:hover{background:rgba(252,129,129,.25)}
+.btn-warn{background:rgba(237,137,54,.12);color:#ed8936;border:1px solid rgba(237,137,54,.3)}
+.btn-warn:hover{background:rgba(237,137,54,.22)}
+.btn-ghost{background:none;border:1px solid #252a3a;color:#718096}
+.btn-ghost:hover{border-color:#718096;color:#e2e8f0}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+/* STATS ROW */
+.stats-row{display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap}
+.stat-pill{background:#151820;border:1px solid #252a3a;border-radius:8px;padding:14px 20px}
+.stat-pill .val{font-family:monospace;font-size:22px;font-weight:700;color:#4fd1c5}
+.stat-pill .lbl{font-size:11px;color:#718096;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+
+/* SEARCH */
+.search-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.search-bar input{flex:1;min-width:200px;padding:9px 12px;background:#0d0f14;border:1px solid #252a3a;border-radius:6px;color:#e2e8f0;font-size:13px;outline:none}
+.search-bar input:focus{border-color:#4fd1c5}
+.search-bar select{padding:9px 12px;background:#0d0f14;border:1px solid #252a3a;border-radius:6px;color:#e2e8f0;font-size:13px;outline:none}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border:1px solid #252a3a;border-radius:10px}
+table{width:100%;border-collapse:collapse}
+thead th{background:#151820;padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#718096;border-bottom:1px solid #252a3a;white-space:nowrap}
+tbody tr{border-bottom:1px solid #1a1f2e;transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#151820}
+tbody td{padding:10px 14px;vertical-align:top;font-size:13px}
+.q-text{max-width:360px;line-height:1.45;color:#e2e8f0}
+.q-cat{font-size:11px;padding:2px 7px;background:#1c2030;border-radius:3px;color:#718096;white-space:nowrap}
+.q-ans{font-family:monospace;font-size:12px;color:#4fd1c5;font-weight:700}
+.hidden-badge{font-size:10px;padding:2px 6px;background:rgba(252,129,129,.15);color:#fc8181;border-radius:3px;margin-left:6px}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* FLAG CARDS */
+.flag-card{background:#151820;border:1px solid #252a3a;border-radius:8px;padding:16px;margin-bottom:12px}
+.flag-meta{font-size:11px;color:#718096;margin-bottom:8px;font-family:monospace}
+.flag-question{font-size:13px;color:#e2e8f0;margin-bottom:8px;line-height:1.5}
+.flag-note{font-size:13px;color:#a0aec0;background:#0d0f14;border-radius:4px;padding:10px;margin-bottom:10px;line-height:1.5}
+.flag-cat{font-size:11px;color:#7c6af5}
+
+/* ADD QUESTION FORM */
+.add-form{background:#151820;border:1px solid #252a3a;border-radius:10px;padding:24px;max-width:700px}
+.add-form h3{font-size:15px;font-weight:600;margin-bottom:20px}
+.options-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.msg{padding:10px 14px;border-radius:6px;font-size:13px;margin-bottom:14px}
+.msg.ok{background:rgba(72,187,120,.1);color:#48bb78;border:1px solid rgba(72,187,120,.2)}
+.msg.err{background:rgba(252,129,129,.1);color:#fc8181;border:1px solid rgba(252,129,129,.2)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:#151820;border:1px solid #252a3a;border-radius:10px;padding:28px;max-width:680px;width:95%;max-height:90vh;overflow-y:auto;position:relative}
+.modal-box h3{font-size:15px;font-weight:600;margin-bottom:18px}
+.btn-close{position:absolute;top:14px;right:16px;background:none;border:none;color:#718096;font-size:20px;cursor:pointer;line-height:1}
+.btn-close:hover{color:#e2e8f0}
+
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #252a3a;border-top-color:#4fd1c5;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>irrad8u Admin</h1>
+    <p>Enter your admin password to continue</p>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="admin-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="doAdminLogin()">Sign in</button>
+    <div id="login-err" style="color:#fc8181;font-size:12px;margin-top:10px;min-height:16px"></div>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="admin-app">
+  <div class="top-bar">
+    <div class="top-bar-logo">irrad8u · Admin</div>
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('questions')">Questions</button>
+      <button class="tab" onclick="showTab('flags')">Flags <span id="flag-badge" style="display:none;background:#fc8181;color:#0d0f14;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px"></span></button>
+      <button class="tab" onclick="showTab('add')">Add Question</button>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">Log out</button>
+  </div>
+
+  <!-- QUESTIONS PAGE -->
+  <div class="page active" id="tab-questions">
+    <div class="page-header">
+      <h2>Question Bank</h2>
+      <div class="stats-row" style="margin:0">
+        <div class="stat-pill"><div class="val" id="stat-total">—</div><div class="lbl">Total</div></div>
+        <div class="stat-pill"><div class="val" id="stat-hidden">—</div><div class="lbl">Hidden</div></div>
+      </div>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="q-search" placeholder="Search questions..." oninput="renderQuestions()">
+      <select id="q-cat-filter" onchange="renderQuestions()">
+        <option value="">All categories</option>
+      </select>
+      <select id="q-status-filter" onchange="renderQuestions()">
+        <option value="">All</option>
+        <option value="visible">Visible only</option>
+        <option value="hidden">Hidden only</option>
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Question</th>
+            <th>Category</th>
+            <th>Ans</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="q-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FLAGS PAGE -->
+  <div class="page" id="tab-flags">
+    <div class="page-header"><h2>Flagged Questions</h2></div>
+    <div id="flags-list"><div style="color:#718096;padding:40px 0;text-align:center">Loading...</div></div>
+  </div>
+
+  <!-- ADD QUESTION PAGE -->
+  <div class="page" id="tab-add">
+    <div class="add-form">
+      <h3>Add New Question</h3>
+      <div id="add-msg"></div>
+      <div class="field"><label>Question stem</label><textarea id="a-question" rows="3" placeholder="Question text..."></textarea></div>
+      <div class="field"><label>Category</label>
+        <select id="a-category">
+          <option value="">Select category...</option>
+          <option>Breast</option>
+          <option>CNS & Ocular</option>
+          <option>GI & Hepatobiliary</option>
+          <option>Genitourinary</option>
+          <option>Gynecology — Brachytherapy</option>
+          <option>Gynecology — Endometrium</option>
+          <option>Gynecology — Ovary & Vulva</option>
+          <option>Gynecology — Uterine Cervix</option>
+          <option>Head & Neck</option>
+          <option>Radiobiology & Physics</option>
+          <option>Sarcoma & Bone</option>
+          <option>Statistics & Research Methods</option>
+        </select>
+      </div>
+      <div class="options-grid">
+        <div class="field"><label>Option A</label><input type="text" id="a-opt-a" placeholder="Option A"></div>
+        <div class="field"><label>Option B</label><input type="text" id="a-opt-b" placeholder="Option B"></div>
+        <div class="field"><label>Option C</label><input type="text" id="a-opt-c" placeholder="Option C"></div>
+        <div class="field"><label>Option D</label><input type="text" id="a-opt-d" placeholder="Option D"></div>
+      </div>
+      <div class="field"><label>Correct Answer</label>
+        <select id="a-answer">
+          <option value="">Select answer...</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+      </div>
+      <div class="field"><label>Rationale</label><textarea id="a-rationale" rows="4" placeholder="Explanation..."></textarea></div>
+      <div class="field"><label>Citation</label><input type="text" id="a-citation" placeholder="Author et al. Journal. Year."></div>
+      <button class="btn btn-primary" onclick="addQuestion()">Add question</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal-box">
+    <button class="btn-close" onclick="closeEdit()">×</button>
+    <h3>Edit Question</h3>
+    <input type="hidden" id="e-id">
+    <div class="field"><label>Question stem</label><textarea id="e-question" rows="3"></textarea></div>
+    <div class="field"><label>Category</label>
+      <select id="e-category">
+        <option>Breast</option><option>CNS & Ocular</option><option>GI & Hepatobiliary</option>
+        <option>Genitourinary</option><option>Gynecology — Brachytherapy</option>
+        <option>Gynecology — Endometrium</option><option>Gynecology — Ovary & Vulva</option>
+        <option>Gynecology — Uterine Cervix</option><option>Head & Neck</option>
+        <option>Radiobiology & Physics</option><option>Sarcoma & Bone</option>
+        <option>Statistics & Research Methods</option>
+      </select>
+    </div>
+    <div class="options-grid">
+      <div class="field"><label>Option A</label><input type="text" id="e-opt-a"></div>
+      <div class="field"><label>Option B</label><input type="text" id="e-opt-b"></div>
+      <div class="field"><label>Option C</label><input type="text" id="e-opt-c"></div>
+      <div class="field"><label>Option D</label><input type="text" id="e-opt-d"></div>
+    </div>
+    <div class="field"><label>Correct Answer</label>
+      <select id="e-answer">
+        <option value="A">A</option><option value="B">B</option>
+        <option value="C">C</option><option value="D">D</option>
+      </select>
+    </div>
+    <div class="field"><label>Rationale</label><textarea id="e-rationale" rows="4"></textarea></div>
+    <div class="field"><label>Citation</label><input type="text" id="e-citation"></div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-primary" onclick="saveEdit()">Save changes</button>
+      <button class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
+    </div>
+    <div id="edit-msg" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<script>
+const ADMIN_PW = sessionStorage.getItem('irrad8u_admin');
+let allQuestions = [];
+
+function doAdminLogin() {
+  const pw = document.getElementById('admin-pw').value;
+  if (!pw) return;
+  sessionStorage.setItem('irrad8u_admin', pw);
+  initAdmin(pw);
+}
+
+function doLogout() {
+  sessionStorage.removeItem('irrad8u_admin');
+  location.reload();
+}
+
+async function api(method, action, body) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-admin-token': sessionStorage.getItem('irrad8u_admin')
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`/api/admin?action=${action}`, opts);
+  if (res.status === 401) { doLogout(); return null; }
+  return res.json();
+}
+
+async function initAdmin(pw) {
+  // Quick auth check
+  const data = await api('GET', 'questions');
+  if (!data) {
+    document.getElementById('login-err').textContent = 'Invalid password.';
+    sessionStorage.removeItem('irrad8u_admin');
+    return;
+  }
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-app').style.display = 'block';
+  allQuestions = data;
+  buildCatFilter();
+  renderQuestions();
+  loadFlags();
+}
+
+function buildCatFilter() {
+  const cats = [...new Set(allQuestions.map(q => q.category))].sort();
+  const sel = document.getElementById('q-cat-filter');
+  cats.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  });
+}
+
+function renderQuestions() {
+  const search = document.getElementById('q-search').value.toLowerCase();
+  const cat = document.getElementById('q-cat-filter').value;
+  const status = document.getElementById('q-status-filter').value;
+
+  let filtered = allQuestions.filter(q => {
+    if (search && !q.question.toLowerCase().includes(search)) return false;
+    if (cat && q.category !== cat) return false;
+    if (status === 'visible' && q.is_hidden) return false;
+    if (status === 'hidden' && !q.is_hidden) return false;
+    return true;
+  });
+
+  document.getElementById('stat-total').textContent = allQuestions.length;
+  document.getElementById('stat-hidden').textContent = allQuestions.filter(q=>q.is_hidden).length;
+
+  const tbody = document.getElementById('q-tbody');
+  tbody.innerHTML = '';
+  filtered.forEach(q => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-family:monospace;color:#4a5568">${q.id}</td>
+      <td class="q-text">${q.question.substring(0,120)}${q.question.length>120?'…':''}${q.is_hidden?'<span class="hidden-badge">hidden</span>':''}</td>
+      <td><span class="q-cat">${q.category||'—'}</span></td>
+      <td class="q-ans">${q.answer||'—'}</td>
+      <td><span style="font-size:11px;color:${q.is_hidden?'#fc8181':'#48bb78'}">${q.is_hidden?'Hidden':'Visible'}</span></td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-ghost btn-sm" onclick="openEdit(${q.id})">Edit</button>
+          <button class="btn btn-warn btn-sm" onclick="toggleHide(${q.id},${!q.is_hidden})">${q.is_hidden?'Show':'Hide'}</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteQ(${q.id})">Delete</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:#4a5568">No questions found</td></tr>`;
+  }
+}
+
+async function toggleHide(id, hidden) {
+  await api('PATCH', 'hide', { id, is_hidden: hidden });
+  const q = allQuestions.find(x => x.id === id);
+  if (q) q.is_hidden = hidden;
+  renderQuestions();
+}
+
+async function deleteQ(id) {
+  if (!confirm('Permanently delete this question?')) return;
+  await api('DELETE', 'delete', { id });
+  allQuestions = allQuestions.filter(q => q.id !== id);
+  renderQuestions();
+}
+
+function openEdit(id) {
+  const q = allQuestions.find(x => x.id === id);
+  if (!q) return;
+  document.getElementById('e-id').value = q.id;
+  document.getElementById('e-question').value = q.question || '';
+  document.getElementById('e-category').value = q.category || '';
+  document.getElementById('e-opt-a').value = q.option_a || '';
+  document.getElementById('e-opt-b').value = q.option_b || '';
+  document.getElementById('e-opt-c').value = q.option_c || '';
+  document.getElementById('e-opt-d').value = q.option_d || '';
+  document.getElementById('e-answer').value = q.answer || 'A';
+  document.getElementById('e-rationale').value = q.rationale || '';
+  document.getElementById('e-citation').value = q.citation || '';
+  document.getElementById('edit-msg').textContent = '';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function closeEdit() { document.getElementById('edit-modal').classList.remove('open'); }
+
+async function saveEdit() {
+  const id = parseInt(document.getElementById('e-id').value);
+  const fields = {
+    id,
+    question: document.getElementById('e-question').value,
+    category: document.getElementById('e-category').value,
+    option_a: document.getElementById('e-opt-a').value,
+    option_b: document.getElementById('e-opt-b').value,
+    option_c: document.getElementById('e-opt-c').value,
+    option_d: document.getElementById('e-opt-d').value,
+    answer: document.getElementById('e-answer').value,
+    rationale: document.getElementById('e-rationale').value,
+    citation: document.getElementById('e-citation').value,
+  };
+  const res = await api('PATCH', 'edit', fields);
+  if (res && res.ok) {
+    const q = allQuestions.find(x => x.id === id);
+    if (q) Object.assign(q, fields);
+    document.getElementById('edit-msg').innerHTML = '<span style="color:#48bb78">Saved.</span>';
+    setTimeout(closeEdit, 800);
+    renderQuestions();
+  } else {
+    document.getElementById('edit-msg').innerHTML = '<span style="color:#fc8181">Save failed.</span>';
+  }
+}
+
+async function loadFlags() {
+  const data = await api('GET', 'flags');
+  if (!data) return;
+  const badge = document.getElementById('flag-badge');
+  if (data.length > 0) { badge.style.display='inline'; badge.textContent = data.length; }
+  const list = document.getElementById('flags-list');
+  if (!data.length) { list.innerHTML = '<div style="color:#718096;padding:40px 0;text-align:center">No unresolved flags.</div>'; return; }
+  list.innerHTML = '';
+  data.forEach(f => {
+    const div = document.createElement('div');
+    div.className = 'flag-card';
+    div.innerHTML = `
+      <div class="flag-meta">Flag #${f.id} · ${new Date(f.created_at).toLocaleDateString()}</div>
+      <div class="flag-cat">${f.questions?.category || '—'}</div>
+      <div class="flag-question">${f.questions?.question || '(question deleted)'}</div>
+      ${f.note ? `<div class="flag-note">"${f.note}"</div>` : ''}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="resolveFlag(${f.id}, this)">Mark resolved</button>
+        <button class="btn btn-warn btn-sm" onclick="openEditFromFlag(${f.questions?.id})">Edit question</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+async function resolveFlag(id, btn) {
+  btn.disabled = true; btn.textContent = 'Resolving...';
+  await api('PATCH', 'resolve-flag', { id });
+  btn.closest('.flag-card').style.opacity = '.4';
+  btn.textContent = 'Resolved';
+}
+
+function openEditFromFlag(qid) {
+  if (!qid) return;
+  showTab('questions');
+  setTimeout(() => openEdit(qid), 100);
+}
+
+async function addQuestion() {
+  const q = {
+    question: document.getElementById('a-question').value.trim(),
+    category: document.getElementById('a-category').value,
+    option_a: document.getElementById('a-opt-a').value.trim(),
+    option_b: document.getElementById('a-opt-b').value.trim(),
+    option_c: document.getElementById('a-opt-c').value.trim(),
+    option_d: document.getElementById('a-opt-d').value.trim(),
+    answer: document.getElementById('a-answer').value,
+    rationale: document.getElementById('a-rationale').value.trim(),
+    citation: document.getElementById('a-citation').value.trim(),
+  };
+  const msg = document.getElementById('add-msg');
+  if (!q.question || !q.category || !q.answer) {
+    msg.innerHTML = '<div class="msg err">Question, category, and answer are required.</div>';
+    return;
+  }
+  const res = await api('POST', 'add', q);
+  if (res && res.id) {
+    allQuestions.push(res);
+    msg.innerHTML = '<div class="msg ok">Question added successfully.</div>';
+    ['a-question','a-opt-a','a-opt-b','a-opt-c','a-opt-d','a-rationale','a-citation'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('a-category').value = '';
+    document.getElementById('a-answer').value = '';
+    setTimeout(() => msg.innerHTML = '', 3000);
+  } else {
+    msg.innerHTML = '<div class="msg err">Failed to add question.</div>';
+  }
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['questions','flags','add'][i] === name);
+  });
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// Auto-login if session exists
+if (sessionStorage.getItem('irrad8u_admin')) {
+  initAdmin(sessionStorage.getItem('irrad8u_admin'));
+}
+</script>
+</body>
+</html>
