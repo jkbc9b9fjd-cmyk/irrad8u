@@ -289,19 +289,41 @@ async function api(method, action, body) {
 }
 
 async function initAdmin(pw) {
-  // Quick auth check
-  const data = await api('GET', 'questions');
-  if (!data) {
-    document.getElementById('login-err').textContent = 'Invalid password.';
-    sessionStorage.removeItem('irrad8u_admin');
-    return;
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = 'Connecting...';
+  try {
+    const res = await fetch('/api/admin?action=questions', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-token': pw
+      }
+    });
+    if (res.status === 401) {
+      errEl.textContent = 'Invalid password.';
+      sessionStorage.removeItem('irrad8u_admin');
+      return;
+    }
+    if (!res.ok) {
+      const body = await res.text();
+      errEl.textContent = `Server error (${res.status}): ${body.substring(0,120)}`;
+      return;
+    }
+    const data = await res.json();
+    if (!Array.isArray(data)) {
+      errEl.textContent = `Unexpected response: ${JSON.stringify(data).substring(0,120)}`;
+      return;
+    }
+    errEl.textContent = '';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-app').style.display = 'block';
+    allQuestions = data;
+    buildCatFilter();
+    renderQuestions();
+    loadFlags();
+  } catch(e) {
+    errEl.textContent = `Network error: ${e.message}`;
   }
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('admin-app').style.display = 'block';
-  allQuestions = data;
-  buildCatFilter();
-  renderQuestions();
-  loadFlags();
 }
 
 function buildCatFilter() {
