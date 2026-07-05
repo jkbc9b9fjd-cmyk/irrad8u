@@ -318,12 +318,13 @@ async function initAdmin(pw) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('admin-app').style.display = 'block';
     allQuestions = data;
+    console.log('API returned rows:', data.length);
     buildCatFilter();
     renderQuestions();
     loadFlags();
-    // Set stats after confirmed full load
-    document.getElementById('stat-total').textContent = allQuestions.length;
-    document.getElementById('stat-hidden').textContent = allQuestions.filter(q=>q.is_hidden).length;
+    // Force correct stat from actual array count
+    document.getElementById('stat-total').textContent = data.length;
+    document.getElementById('stat-hidden').textContent = data.filter(q=>q.is_hidden).length;
   } catch(e) {
     errEl.textContent = `Network error: ${e.message}`;
   }
@@ -354,6 +355,7 @@ function renderQuestions() {
 
   document.getElementById('stat-total').textContent = allQuestions.length;
   document.getElementById('stat-hidden').textContent = allQuestions.filter(q=>q.is_hidden).length;
+  console.log('renderQuestions sees allQuestions.length:', allQuestions.length);
 
   const tbody = document.getElementById('q-tbody');
   tbody.innerHTML = '';
