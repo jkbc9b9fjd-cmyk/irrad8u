@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { name, email, message } = req.body;
@@ -18,12 +18,7 @@ export default async function handler(req, res) {
         to: [process.env.CONTACT_EMAIL],
         reply_to: email,
         subject: `irrad8u contact from ${name}`,
-        html: `
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Message:</strong></p>
-          <p>${message.replace(/\n/g, '<br>')}</p>
-        `
+        html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Message:</strong></p><p>${message.replace(/\n/g, '<br>')}</p>`
       })
     });
 
@@ -32,10 +27,9 @@ export default async function handler(req, res) {
       console.error('Resend error:', err);
       return res.status(500).json({ error: 'Failed to send email' });
     }
-
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error('Contact error:', e);
     return res.status(500).json({ error: 'Server error' });
   }
-}
+};
