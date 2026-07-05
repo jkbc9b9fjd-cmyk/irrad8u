@@ -2,34 +2,26 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 async function getAllQuestions() {
-  let all = [];
-  let page = 0;
-  const pageSize = 100;
-
-  while (true) {
-    const from = page * pageSize;
-    const to = from + pageSize - 1;
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/questions?select=*&order=id`,
-      {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Range': `${from}-${to}`,
-          'Range-Unit': 'items',
-          'Prefer': 'count=exact'
-        }
+  // Fetch all questions in one request using limit and offset
+  // Supabase REST allows up to 1000 per request with explicit limit param
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/questions?select=*&order=id&limit=1000&offset=0`,
+    {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
       }
-    );
-    const text = await res.text();
-    let data;
-    try { data = JSON.parse(text); } catch { break; }
-    if (!Array.isArray(data) || data.length === 0) break;
-    all = all.concat(data);
-    if (data.length < pageSize) break;
-    page++;
+    }
+  );
+  const text = await res.text();
+  try {
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) return data;
+    throw new Error(JSON.stringify(data));
+  } catch(e) {
+    throw new Error(`Parse error: ${text.substring(0,200)}`);
   }
-  return all;
 }
 
 async function sbFetch(path, method = 'GET', body = null) {
@@ -58,7 +50,6 @@ module.exports = async function handler(req, res) {
 
   const { action } = req.query;
 
-  // GET all questions with pagination
   if (req.method === 'GET' && action === 'questions') {
     try {
       const all = await getAllQuestions();
@@ -68,14 +59,12 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // GET unresolved flags
   if (req.method === 'GET' && action === 'flags') {
     const r = await sbFetch('flags?select=*,questions(question,category)&resolved=eq.false&order=created_at.desc');
     if (!r.ok) return res.status(500).json({ error: r.data });
     return res.status(200).json(r.data);
   }
 
-  // POST add question
   if (req.method === 'POST' && action === 'add') {
     const { question, option_a, option_b, option_c, option_d, answer, category, rationale, citation } = req.body;
     if (!question || !answer || !category) {
@@ -86,7 +75,6 @@ module.exports = async function handler(req, res) {
     return res.status(200).json(Array.isArray(r.data) ? r.data[0] : r.data);
   }
 
-  // PATCH hide/show
   if (req.method === 'PATCH' && action === 'hide') {
     const { id, is_hidden } = req.body;
     const r = await sbFetch(`questions?id=eq.${id}`, 'PATCH', { is_hidden });
@@ -94,7 +82,6 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
-  // PATCH edit question
   if (req.method === 'PATCH' && action === 'edit') {
     const { id, ...fields } = req.body;
     const r = await sbFetch(`questions?id=eq.${id}`, 'PATCH', fields);
@@ -102,7 +89,6 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
-  // DELETE question
   if (req.method === 'DELETE' && action === 'delete') {
     const { id } = req.body;
     const r = await sbFetch(`questions?id=eq.${id}`, 'DELETE');
@@ -110,7 +96,6 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
-  // PATCH resolve flag
   if (req.method === 'PATCH' && action === 'resolve-flag') {
     const { id } = req.body;
     const r = await sbFetch(`flags?id=eq.${id}`, 'PATCH', { resolved: true });
