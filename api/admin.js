@@ -8,7 +8,8 @@ async function sbFetch(path, method = 'GET', body = null) {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Content-Type': 'application/json',
-      'Prefer': method === 'POST' ? 'return=representation' : ''
+      'Prefer': method === 'POST' ? 'return=representation' : '',
+      'Range': '0-9999'  // ensure we get all rows
     }
   };
   if (body) opts.body = JSON.stringify(body);
@@ -27,9 +28,9 @@ module.exports = async function handler(req, res) {
 
   const { action } = req.query;
 
-  // GET all questions
+  // GET all questions — explicitly fetch ALL regardless of is_hidden
   if (req.method === 'GET' && action === 'questions') {
-    const r = await sbFetch('questions?select=*&order=id');
+    const r = await sbFetch('questions?select=*&order=id&limit=9999');
     if (!r.ok) return res.status(500).json({ error: r.data });
     return res.status(200).json(r.data);
   }
