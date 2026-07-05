@@ -321,6 +321,9 @@ async function initAdmin(pw) {
     buildCatFilter();
     renderQuestions();
     loadFlags();
+    // Set stats after confirmed full load
+    document.getElementById('stat-total').textContent = allQuestions.length;
+    document.getElementById('stat-hidden').textContent = allQuestions.filter(q=>q.is_hidden).length;
   } catch(e) {
     errEl.textContent = `Network error: ${e.message}`;
   }
