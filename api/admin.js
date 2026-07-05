@@ -1,6 +1,37 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
+async function getAllQuestions() {
+  let all = [];
+  let page = 0;
+  const pageSize = 100;
+
+  while (true) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/questions?select=*&order=id`,
+      {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Range': `${from}-${to}`,
+          'Range-Unit': 'items',
+          'Prefer': 'count=exact'
+        }
+      }
+    );
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { break; }
+    if (!Array.isArray(data) || data.length === 0) break;
+    all = all.concat(data);
+    if (data.length < pageSize) break;
+    page++;
+  }
+  return all;
+}
+
 async function sbFetch(path, method = 'GET', body = null) {
   const opts = {
     method,
@@ -8,8 +39,7 @@ async function sbFetch(path, method = 'GET', body = null) {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Content-Type': 'application/json',
-      'Prefer': method === 'POST' ? 'return=representation' : '',
-      'Range': '0-9999'  // ensure we get all rows
+      'Prefer': method === 'POST' ? 'return=representation' : ''
     }
   };
   if (body) opts.body = JSON.stringify(body);
@@ -28,11 +58,14 @@ module.exports = async function handler(req, res) {
 
   const { action } = req.query;
 
-  // GET all questions — explicitly fetch ALL regardless of is_hidden
+  // GET all questions with pagination
   if (req.method === 'GET' && action === 'questions') {
-    const r = await sbFetch('questions?select=*&order=id&limit=9999');
-    if (!r.ok) return res.status(500).json({ error: r.data });
-    return res.status(200).json(r.data);
+    try {
+      const all = await getAllQuestions();
+      return res.status(200).json(all);
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
   }
 
   // GET unresolved flags
