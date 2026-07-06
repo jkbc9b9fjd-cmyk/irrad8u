@@ -515,28 +515,42 @@ function renderGuestDashboard() {
 // ── DASHBOARD ──
 async function renderDashboard() {
   if (!currentUser || currentUser.guest) return;
-  const { data: sessions } = await _sb
+  const { data: sessions, error } = await _sb
     .from('sessions')
     .select('total,correct,answers,category')
     .eq('user_id', currentUser.id);
 
-  let totalAnswered=0, totalCorrect=0;
+  if (error) console.warn('Session fetch error:', error.message);
+
+  const sessionList = sessions || [];
+  let totalAnswered = 0, totalCorrect = 0;
+
+  // Build category stats from QUESTIONS array
   const catStats = {};
   QUESTIONS.forEach(q => {
-    if (!catStats[q.category]) catStats[q.category] = { total:0, correct:0, qs: QUESTIONS.filter(x=>x.category===q.category).length };
+    if (!catStats[q.category]) catStats[q.category] = { total:0, correct:0 };
   });
-  (sessions||[]).forEach(s => {
-    totalAnswered += s.total||0;
-    totalCorrect  += s.correct||0;
-    (s.answers||[]).forEach(a => {
-      const q = QUESTIONS.find(x=>x.id===a.id);
-      if (q && catStats[q.category]) { catStats[q.category].total++; if(a.correct) catStats[q.category].correct++; }
+
+  sessionList.forEach(s => {
+    // Use stored total/correct directly for summary stats
+    totalAnswered += s.total || 0;
+    totalCorrect  += s.correct || 0;
+
+    // For per-category breakdown, match answers to questions by id
+    // Supabase questions have numeric ids; match both ways
+    (s.answers || []).forEach(a => {
+      const qId = typeof a.id === 'string' ? parseInt(a.id) : a.id;
+      const q = QUESTIONS.find(x => x.id === qId || x.id === a.id);
+      if (q && catStats[q.category] !== undefined) {
+        catStats[q.category].total++;
+        if (a.correct) catStats[q.category].correct++;
+      }
     });
   });
 
   document.getElementById('stat-total-q').textContent = totalAnswered;
   document.getElementById('stat-accuracy').textContent = totalAnswered ? Math.round(totalCorrect/totalAnswered*100)+'%' : '—';
-  document.getElementById('stat-sessions').textContent = (sessions||[]).length;
+  document.getElementById('stat-sessions').textContent = sessionList.length;
 
   const cl = document.getElementById('cat-list');
   cl.innerHTML = '';
