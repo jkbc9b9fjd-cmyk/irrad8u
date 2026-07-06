@@ -658,7 +658,15 @@ async function endQuiz() {
   const correct = quizState.answers.filter(a=>a.correct).length;
   const total   = quizState.answers.length;
   if (currentUser && !currentUser.guest) {
-    await _sb.from('sessions').insert({ user_id:currentUser.id, category:quizState.catFilter, total, correct, answers:quizState.answers });
+    const { error: sessionError } = await _sb.from('sessions').insert({
+      user_id: currentUser.id,
+      category: quizState.catFilter,
+      total,
+      correct,
+      answers: quizState.answers
+    });
+    if (sessionError) console.error('Session save error:', sessionError.message, sessionError.code, sessionError.details);
+    else console.log('Session saved OK for user:', currentUser.id);
   }
   const pct = Math.round(correct/total*100);
   const scoreEl = document.getElementById('result-score');
