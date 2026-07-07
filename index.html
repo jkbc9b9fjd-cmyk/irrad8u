@@ -782,7 +782,8 @@ async function submitContact() {
 
   // Try to load from Supabase without blocking UI
   loadQuestions().then(() => {
-    // If user is already on dashboard, refresh category list
+    // Refresh categories and dashboard once Supabase questions are loaded
+    buildSetupOptions();
     if (currentUser && !currentUser.guest) renderDashboard();
   }).catch(() => {});
 
@@ -791,6 +792,8 @@ async function submitContact() {
     const { data:{ session } } = await _sb.auth.getSession();
     if (session?.user) {
       currentUser = session.user;
+      // Wait for questions to load before entering app
+      await loadQuestions();
       enterApp(session.user);
       return;
     }
