@@ -768,26 +768,17 @@ async function submitContact() {
 
 // ── INIT ──
 (async function() {
-  // Show landing immediately — never block the user
   document.getElementById('loading-screen').style.display = 'none';
 
-  // Load questions in background using fallback first, then try Supabase
+  // Always load from Supabase first, fallback if it fails
   QUESTIONS = FALLBACK_QUESTIONS;
-
-  // Try to load from Supabase without blocking UI
-  loadQuestions().then(() => {
-    // Refresh categories and dashboard once Supabase questions are loaded
-    buildSetupOptions();
-    if (currentUser && !currentUser.guest) renderDashboard();
-  }).catch(() => {});
+  await loadQuestions();
 
   // Check for existing session
   try {
     const { data:{ session } } = await _sb.auth.getSession();
     if (session?.user) {
       currentUser = session.user;
-      // Wait for questions to load before entering app
-      await loadQuestions();
       enterApp(session.user);
       return;
     }
@@ -795,12 +786,13 @@ async function submitContact() {
     console.warn('Session check failed:', e.message);
   }
 
-  // No session — landing page already visible, nothing to do
-
-  // Listen for future auth changes
-  _sb.auth.onAuthStateChange((_event, session) => {
+  // No session — show landing
+  // Listen for future auth changes (login from landing page)
+  _sb.auth.onAuthStateChange(async (_event, session) => {
     if (session?.user && !currentUser) {
       currentUser = session.user;
+      // Reload questions from Supabase to get latest
+      await loadQuestions();
       enterApp(session.user);
     }
   });
