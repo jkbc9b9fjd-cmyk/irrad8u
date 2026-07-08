@@ -383,43 +383,20 @@ let flagQuestionId = null;
 
 // ── LOAD QUESTIONS FROM SUPABASE ──
 async function loadQuestions() {
-  const SURL = 'https://rnsokxugqixutbcrkffj.supabase.co';
-  const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuc29reHVncWl4dXRiY3JrZmZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4ODUyOTQsImV4cCI6MjA5ODQ2MTI5NH0.Zeyrv4PdHhVupN9A6je3hhGjRlhNtUAzeDymX7sHRzI';
-  return new Promise((resolve) => {
-    const xhr = new XMLHttpRequest();
-    const url = SURL + '/rest/v1/questions?select=id,question,option_a,option_b,option_c,option_d,answer,category,rationale,citation&is_hidden=eq.false&order=id&limit=2000';
-    xhr.open('GET', url, true);
-    xhr.setRequestHeader('apikey', SKEY);
-    xhr.setRequestHeader('Authorization', 'Bearer ' + SKEY);
-    xhr.setRequestHeader('Accept', 'application/json');
-    xhr.onload = function() {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const data = JSON.parse(xhr.responseText);
-          if (Array.isArray(data) && data.length > 0) {
-            QUESTIONS = data;
-            console.log('Loaded ' + QUESTIONS.length + ' questions from Supabase');
-          } else {
-            console.warn('No questions returned, using fallback');
-            QUESTIONS = FALLBACK_QUESTIONS;
-          }
-        } catch(e) {
-          console.warn('Parse error, using fallback:', e.message);
-          QUESTIONS = FALLBACK_QUESTIONS;
-        }
-      } else {
-        console.warn('HTTP ' + xhr.status + ', using fallback');
-        QUESTIONS = FALLBACK_QUESTIONS;
-      }
-      resolve();
-    };
-    xhr.onerror = function() {
-      console.warn('XHR error, using fallback');
-      QUESTIONS = FALLBACK_QUESTIONS;
-      resolve();
-    };
-    xhr.send();
-  });
+  try {
+    const res = await fetch('/api/questions');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      QUESTIONS = data;
+      console.log('Loaded ' + QUESTIONS.length + ' questions from Supabase');
+    } else {
+      throw new Error('Empty response');
+    }
+  } catch(e) {
+    console.warn('Question load failed, using embedded fallback:', e.message);
+    QUESTIONS = FALLBACK_QUESTIONS;
+  }
 }
 
 function getOpt(q, letter) {
