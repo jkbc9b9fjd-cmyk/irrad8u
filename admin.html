@@ -391,9 +391,17 @@ async function toggleHide(id, hidden) {
 
 async function deleteQ(id) {
   if (!confirm('Permanently delete this question?')) return;
-  await api('DELETE', 'delete', { id });
-  allQuestions = allQuestions.filter(q => q.id !== id);
-  renderQuestions();
+  const res = await fetch(`/api/admin?action=delete&id=${id}`, {
+    method: 'DELETE',
+    headers: { 'x-admin-token': sessionStorage.getItem('irrad8u_admin') }
+  });
+  const data = await res.json();
+  if (data.ok) {
+    allQuestions = allQuestions.filter(q => q.id !== id);
+    renderQuestions();
+  } else {
+    alert('Delete failed: ' + JSON.stringify(data));
+  }
 }
 
 function openEdit(id) {
@@ -474,8 +482,17 @@ async function resolveFlag(id, btn) {
 
 function openEditFromFlag(qid) {
   if (!qid) return;
-  showTab('questions');
-  setTimeout(() => openEdit(qid), 100);
+  // Switch to questions tab
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', i === 0);
+  });
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-questions').classList.add('active');
+  // Find question by id (handle string/int mismatch)
+  const numId = parseInt(qid);
+  const q = allQuestions.find(x => x.id === numId || x.id === qid);
+  if (!q) { alert('Question ID ' + qid + ' not found in loaded questions.'); return; }
+  setTimeout(() => openEdit(q.id), 150);
 }
 
 async function addQuestion() {
