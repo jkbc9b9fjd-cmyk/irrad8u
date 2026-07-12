@@ -90,7 +90,9 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === 'DELETE' && action === 'delete') {
-    const { id } = req.body;
+    // Accept id from query param or body
+    const id = req.query.id || (req.body && req.body.id);
+    if (!id) return res.status(400).json({ error: 'Missing id' });
     const r = await sbFetch(`questions?id=eq.${id}`, 'DELETE');
     if (!r.ok) return res.status(500).json({ error: r.data });
     return res.status(200).json({ ok: true });
