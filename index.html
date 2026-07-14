@@ -201,7 +201,7 @@ body{font-family:var(--sans);background:#0d0f14;color:#e2e8f0;min-height:100vh}
       <div class="hl-small">A Radiation Oncology</div>
       <div class="hl-big">Question Bank</div>
     </div>
-    <p class="tagline">Learn by doing high-yield questions. Build knowledge, strengthen reasoning, and prepare for the exams that matter in your career.</p>
+    <p class="tagline">Learn by doing high-yield radiation oncology questions. Review detailed rationales for every question, build clinical reasoning, and prepare for the ABR written boards, in-training examination (TXIT), and maintenance of certification.</p>
     <div class="prepare-label">Prepare for</div>
     <div class="exam-grid">
       <div class="exam-card"><div class="exam-icon">🎓</div><div class="exam-title">In-Training<br>Examination</div><div class="exam-desc">Build a strong foundation and assess your readiness.</div></div>
@@ -383,6 +383,15 @@ let flagQuestionId = null;
 
 // ── LOAD QUESTIONS FROM SUPABASE ──
 async function loadQuestions() {
+  // Skip API call when running locally (file:// or localhost)
+  const isLocal = window.location.protocol === 'file:' || 
+                  window.location.hostname === 'localhost' ||
+                  window.location.hostname === '127.0.0.1';
+  if (isLocal) {
+    QUESTIONS = FALLBACK_QUESTIONS;
+    console.log('Local mode: using embedded questions (' + QUESTIONS.length + ')');
+    return;
+  }
   try {
     const res = await fetch('/api/questions');
     if (!res.ok) throw new Error('HTTP ' + res.status);
