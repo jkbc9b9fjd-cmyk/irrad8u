@@ -471,7 +471,7 @@ async function loadFlags() {
       ${f.note ? `<div class="flag-note">"${f.note}"</div>` : ''}
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" onclick="resolveFlag(${f.id}, this)">Mark resolved</button>
-        <button class="btn btn-warn btn-sm" onclick="openEditFromFlag(${f.questions?.id})">Edit question</button>
+        <button class="btn btn-warn btn-sm" onclick="openEditFromFlag(${f.question_id})">Edit question</button>
       </div>`;
     list.appendChild(div);
   });
