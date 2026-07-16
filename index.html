@@ -201,7 +201,7 @@ body{font-family:var(--sans);background:#0d0f14;color:#e2e8f0;min-height:100vh}
       <div class="hl-small">A Radiation Oncology</div>
       <div class="hl-big">Question Bank</div>
     </div>
-    <p class="tagline">Learn by doing high-yield radiation oncology questions. Review detailed rationales for every question, build clinical reasoning, and prepare for the ABR written boards, in-training examination (TXIT), and maintenance of certification.</p>
+    <p class="tagline">Learn by doing high-yield radiation oncology questions. Review detailed rationales for every question, build clinical reasoning, and prepare for the ABR written boards, in-training examination (TXIT), and maintenance of certification. The bank currently contains <span id="landing-q-count">over 900</span> high-yield questions across clinical domains, with new content added regularly. Last updated <span id="landing-date"></span>.</p>
     <div class="prepare-label">Prepare for</div>
     <div class="exam-grid">
       <div class="exam-card"><div class="exam-icon">🎓</div><div class="exam-title">In-Training<br>Examination</div><div class="exam-desc">Build a strong foundation and assess your readiness.</div></div>
@@ -787,6 +787,15 @@ async function submitContact() {
   }
 
   // No session — show landing
+  // Populate landing page stats
+  const countEl = document.getElementById('landing-q-count');
+  const dateEl = document.getElementById('landing-date');
+  if (countEl) countEl.textContent = QUESTIONS.length > 0 ? QUESTIONS.length + ' high-yield' : 'over 900';
+  if (dateEl) {
+    const now = new Date();
+    dateEl.textContent = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  }
+
   // Listen for future auth changes (login from landing page)
   _sb.auth.onAuthStateChange(async (_event, session) => {
     if (session?.user && !currentUser) {
