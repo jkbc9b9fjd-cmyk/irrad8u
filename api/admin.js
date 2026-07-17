@@ -5,7 +5,7 @@ async function getAllQuestions() {
   // Fetch all questions in one request using limit and offset
   // Supabase REST allows up to 1000 per request with explicit limit param
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/questions?select=*&order=id&limit=1000&offset=0`,
+    `${SUPABASE_URL}/rest/v1/questions?select=*&order=id&limit=5000&offset=0`,
     {
       headers: {
         'apikey': SUPABASE_KEY,

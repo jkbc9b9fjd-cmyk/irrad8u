@@ -6,7 +6,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/questions?select=id,question,option_a,option_b,option_c,option_d,answer,category,rationale,citation&is_hidden=eq.false&order=id&limit=2000`,
+      `${SUPABASE_URL}/rest/v1/questions?select=id,question,option_a,option_b,option_c,option_d,answer,category,rationale,citation&is_hidden=eq.false&order=id&limit=5000`,
       {
         headers: {
           'apikey': SUPABASE_KEY,
