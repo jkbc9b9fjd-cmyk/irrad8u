@@ -2,26 +2,33 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 async function getAllQuestions() {
-  // Fetch all questions in one request using limit and offset
-  // Supabase REST allows up to 1000 per request with explicit limit param
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/questions?select=*&order=id&limit=5000&offset=0`,
-    {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json'
+  let all = [];
+  let from = 0;
+  const pageSize = 500;
+
+  while (true) {
+    const to = from + pageSize - 1;
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/questions?select=*&order=id`,
+      {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Range': `${from}-${to}`,
+          'Range-Unit': 'items',
+          'Prefer': 'count=none'
+        }
       }
-    }
-  );
-  const text = await res.text();
-  try {
-    const data = JSON.parse(text);
-    if (Array.isArray(data)) return data;
-    throw new Error(JSON.stringify(data));
-  } catch(e) {
-    throw new Error(`Parse error: ${text.substring(0,200)}`);
+    );
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) { throw new Error(`Parse error: ${text.substring(0,200)}`); }
+    if (!Array.isArray(data) || data.length === 0) break;
+    all = all.concat(data);
+    if (data.length < pageSize) break;
+    from += pageSize;
   }
+  return all;
 }
 
 async function sbFetch(path, method = 'GET', body = null) {
