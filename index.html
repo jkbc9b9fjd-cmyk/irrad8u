@@ -304,6 +304,7 @@ body{font-family:var(--sans);background:#0d0f14;color:#e2e8f0;min-height:100vh}
     <div class="start-options" id="start-options">
       <div class="start-card" onclick="startQuiz('all',10,'instant')"><div class="badge">10 Q</div><h3>Random 10</h3><p>Mixed categories, instant feedback</p></div>
       <div class="start-card" onclick="startQuiz('all',25,'instant')"><div class="badge">25 Q</div><h3>Full Practice Set</h3><p>Comprehensive session across all domains</p></div>
+      <div class="start-card" id="bookmark-card" onclick="startBookmarkedQuiz()" style="display:none;grid-column:1/-1;border-color:#f6c90e"><div class="badge" style="background:rgba(246,201,14,.12);color:#f6c90e">☆ SAVED</div><h3>Bookmarked Questions</h3><p id="bookmark-count-label">Practice your saved questions</p></div>
     </div>
     <p class="section-title">Select a category</p>
     <div class="category-list" id="cat-list"></div>
@@ -349,6 +350,7 @@ body{font-family:var(--sans);background:#0d0f14;color:#e2e8f0;min-height:100vh}
     </div>
     <div class="quiz-actions">
       <button class="btn-flag" id="btn-flag" onclick="openFlagModal()" style="display:none">⚑ Flag question</button>
+      <button class="btn-bookmark" id="btn-bookmark" onclick="toggleBookmark()" style="display:none">☆ Bookmark</button>
       <div style="display:flex;gap:10px;margin-left:auto">
         <button class="btn-next" id="btn-next" onclick="nextQuestion()" disabled>Next question →</button>
       </div>
@@ -479,7 +481,10 @@ function enterApp(user, guest=false) {
   document.getElementById('nav-history').style.display = guest ? 'none' : '';
   buildSetupOptions();
   if (guest) renderGuestDashboard();
-  else renderDashboard();
+  else {
+    renderDashboard();
+    loadBookmarks();
+  }
   showPage('dashboard');
   showApp();
 }
@@ -597,6 +602,8 @@ function renderQuestion() {
   document.getElementById('q-text').textContent = q.question;
   document.getElementById('btn-next').disabled = true;
   document.getElementById('btn-flag').style.display = currentUser?.guest ? 'none' : 'inline-block';
+  document.getElementById('btn-bookmark').style.display = currentUser?.guest ? 'none' : 'inline-block';
+  updateBookmarkBtn();
   document.getElementById('flag-success').textContent = '';
   const optDiv = document.getElementById('q-options');
   optDiv.innerHTML = '';
@@ -686,6 +693,7 @@ async function endQuiz() {
         <div class="review-ans"><span class="lbl">Correct answer: </span><span class="correct-ans">${q.answer}. ${getOpt(q,q.answer)}</span></div>
         ${!a.correct?`<div class="review-ans"><span class="lbl">Your answer: </span><span class="your-ans">${a.chosen}. ${getOpt(q,a.chosen)}</span></div>`:''}
         <div class="review-rationale">${q.rationale||''}<br><br><em style="color:#4a5568;font-size:12px">${q.citation||''}</em></div>
+        <button onclick="toggleBookmarkById(${q.id}, this)" class="btn-bookmark" style="margin-top:10px;font-size:12px;padding:5px 10px" id="bm-${q.id}">${userBookmarks.has(q.id)?'★ Bookmarked':'☆ Bookmark'}</button>
       </div>`;
     rl.appendChild(div);
   });
@@ -766,6 +774,95 @@ async function submitContact() {
     if (res.ok) { document.getElementById('contact-fields').style.display='none'; document.getElementById('contact-success').style.display='block'; }
     else err.textContent='Failed to send. Please try again.';
   } catch(e) { err.textContent='Network error. Please try again.'; }
+}
+
+// ── BOOKMARKS ──
+let userBookmarks = new Set(); // set of bookmarked question_id values
+
+async function loadBookmarks() {
+  if (!currentUser || currentUser.guest) return;
+  try {
+    const res = await fetch(`/api/bookmarks?user_id=${currentUser.id}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    userBookmarks = new Set(data.map(b => b.question_id));
+    updateBookmarkCard();
+  } catch(e) { console.warn('Bookmark load failed:', e.message); }
+}
+
+function updateBookmarkCard() {
+  const card = document.getElementById('bookmark-card');
+  const label = document.getElementById('bookmark-count-label');
+  if (!card) return;
+  if (userBookmarks.size > 0) {
+    card.style.display = '';
+    label.textContent = `${userBookmarks.size} saved question${userBookmarks.size !== 1 ? 's' : ''}`;
+  } else {
+    card.style.display = 'none';
+  }
+}
+
+function updateBookmarkBtn() {
+  const q = quizState?.questions[quizState.current];
+  if (!q) return;
+  const btn = document.getElementById('btn-bookmark');
+  if (!btn) return;
+  const isBookmarked = userBookmarks.has(q.id);
+  btn.textContent = isBookmarked ? '★ Bookmarked' : '☆ Bookmark';
+  btn.classList.toggle('bookmarked', isBookmarked);
+}
+
+async function toggleBookmarkById(qid, btn) {
+  if (!currentUser || currentUser.guest) return;
+  const isBookmarked = userBookmarks.has(qid);
+  try {
+    if (isBookmarked) {
+      await fetch(`/api/bookmarks?user_id=${currentUser.id}&question_id=${qid}`, { method: 'DELETE' });
+      userBookmarks.delete(qid);
+      btn.textContent = '☆ Bookmark';
+      btn.classList.remove('bookmarked');
+    } else {
+      await fetch('/api/bookmarks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: currentUser.id, question_id: qid })
+      });
+      userBookmarks.add(qid);
+      btn.textContent = '★ Bookmarked';
+      btn.classList.add('bookmarked');
+    }
+    updateBookmarkCard();
+  } catch(e) { console.warn('Bookmark toggle failed:', e.message); }
+}
+
+async function toggleBookmark() {
+  const q = quizState?.questions[quizState.current];
+  if (!q || !currentUser || currentUser.guest) return;
+  const isBookmarked = userBookmarks.has(q.id);
+  try {
+    if (isBookmarked) {
+      await fetch(`/api/bookmarks?user_id=${currentUser.id}&question_id=${q.id}`, { method: 'DELETE' });
+      userBookmarks.delete(q.id);
+    } else {
+      await fetch('/api/bookmarks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: currentUser.id, question_id: q.id })
+      });
+      userBookmarks.add(q.id);
+    }
+    updateBookmarkBtn();
+    updateBookmarkCard();
+  } catch(e) { console.warn('Bookmark toggle failed:', e.message); }
+}
+
+function startBookmarkedQuiz() {
+  if (userBookmarks.size === 0) return;
+  const pool = QUESTIONS.filter(q => userBookmarks.has(q.id));
+  if (pool.length === 0) { alert('No bookmarked questions found in current question set.'); return; }
+  quizState = { questions: pool, current: 0, answers: [], catFilter: 'bookmarked', mode: 'instant', startTime: Date.now() };
+  showPage('quiz');
+  renderQuestion();
 }
 
 // ── INIT ──
