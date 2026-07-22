@@ -130,6 +130,14 @@ body{font-family:var(--sans);background:#0d0f14;color:#e2e8f0;min-height:100vh}
 .exp-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#4fd1c5;margin-bottom:8px}
 .exp-text{font-size:14px;line-height:1.7;color:#e2e8f0;margin-bottom:12px}
 .exp-citation{font-size:12px;color:#718096;font-style:italic;border-top:1px solid #252a3a;padding-top:10px}
+.rationale-feedback{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid #252a3a}
+.rf-label{font-size:11px;color:#4a5568;margin-right:2px}
+.rf-btn{background:none;border:1px solid #252a3a;border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;color:#718096;transition:all .15s;font-family:var(--sans)}
+.rf-btn:hover{border-color:#4a5568;color:#e2e8f0}
+.rf-btn.active-up{background:rgba(72,187,120,.15);border-color:#48bb78;color:#48bb78}
+.rf-btn.active-down{background:rgba(252,129,129,.15);border-color:#fc8181;color:#fc8181}
+.btn-download{padding:10px 20px;background:none;border:1px solid #252a3a;border-radius:8px;color:#718096;font-size:14px;font-family:var(--sans);cursor:pointer;transition:all .15s}
+.btn-download:hover{border-color:#4fd1c5;color:#4fd1c5}
 .quiz-actions{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .btn-flag{padding:8px 14px;background:none;border:1px solid #252a3a;border-radius:8px;color:#718096;font-size:12px;font-family:var(--sans);cursor:pointer;transition:all .15s}
 .btn-flag:hover{border-color:#ed8936;color:#ed8936}
@@ -347,6 +355,11 @@ body{font-family:var(--sans);background:#0d0f14;color:#e2e8f0;min-height:100vh}
       <div class="exp-label">Rationale</div>
       <div class="exp-text" id="exp-text"></div>
       <div class="exp-citation" id="exp-citation"></div>
+      <div class="rationale-feedback" id="rationale-feedback" style="display:none">
+        <span class="rf-label">Was this rationale helpful?</span>
+        <button class="rf-btn" id="rf-up" onclick="voteRationale('up')">&#128077;</button>
+        <button class="rf-btn" id="rf-down" onclick="voteRationale('down')">&#128078;</button>
+      </div>
     </div>
     <div class="quiz-actions">
       <button class="btn-flag" id="btn-flag" onclick="openFlagModal()" style="display:none">⚑ Flag question</button>
@@ -363,9 +376,11 @@ body{font-family:var(--sans);background:#0d0f14;color:#e2e8f0;min-height:100vh}
       <div class="result-label" id="result-label">Session complete</div>
       <div class="result-detail" id="result-detail"></div>
     </div>
-    <div style="display:flex;gap:10px;margin-bottom:24px">
+    <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap">
       <button class="btn-next" onclick="showPage('dashboard')">Back to dashboard</button>
       <button class="btn-sec" onclick="showPage('quiz-setup')">New session</button>
+      <button class="btn-download" onclick="downloadResults('txt')">&#8681; Download as text</button>
+      <button class="btn-download" onclick="downloadResults('csv')">&#8681; Download as CSV</button>
     </div>
     <p class="section-title">Answers &amp; explanations</p>
     <div class="review-list" id="review-list"></div>
@@ -484,6 +499,7 @@ function enterApp(user, guest=false) {
   else {
     renderDashboard();
     loadBookmarks();
+    loadFeedback();
   }
   showPage('dashboard');
   showApp();
@@ -604,6 +620,7 @@ function renderQuestion() {
   document.getElementById('btn-flag').style.display = currentUser?.guest ? 'none' : 'inline-block';
   document.getElementById('btn-bookmark').style.display = currentUser?.guest ? 'none' : 'inline-block';
   updateBookmarkBtn();
+  updateRationaleFeedbackUI();
   document.getElementById('flag-success').textContent = '';
   const optDiv = document.getElementById('q-options');
   optDiv.innerHTML = '';
@@ -863,6 +880,116 @@ function startBookmarkedQuiz() {
   quizState = { questions: pool, current: 0, answers: [], catFilter: 'bookmarked', mode: 'instant', startTime: Date.now() };
   showPage('quiz');
   renderQuestion();
+}
+
+// ── RATIONALE FEEDBACK (thumbs up/down) ──
+let userFeedback = {}; // { question_id: 'up'|'down' }
+
+async function loadFeedback() {
+  if (!currentUser || currentUser.guest) return;
+  try {
+    const res = await fetch(`/api/feedback?user_id=${currentUser.id}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    userFeedback = {};
+    data.forEach(f => { userFeedback[f.question_id] = f.vote; });
+  } catch(e) { console.warn('Feedback load failed:', e.message); }
+}
+
+function updateRationaleFeedbackUI() {
+  const q = quizState?.questions[quizState.current];
+  const wrap = document.getElementById('rationale-feedback');
+  if (!q || !wrap) return;
+  if (currentUser?.guest) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'flex';
+  const vote = userFeedback[q.id];
+  document.getElementById('rf-up').classList.toggle('active-up', vote === 'up');
+  document.getElementById('rf-down').classList.toggle('active-down', vote === 'down');
+}
+
+async function voteRationale(vote) {
+  const q = quizState?.questions[quizState.current];
+  if (!q || !currentUser || currentUser.guest) return;
+  const current = userFeedback[q.id];
+  try {
+    if (current === vote) {
+      await fetch(`/api/feedback?user_id=${currentUser.id}&question_id=${q.id}`, { method: 'DELETE' });
+      delete userFeedback[q.id];
+    } else {
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: currentUser.id, question_id: q.id, vote })
+      });
+      userFeedback[q.id] = vote;
+    }
+    updateRationaleFeedbackUI();
+  } catch(e) { console.warn('Feedback vote failed:', e.message); }
+}
+
+// ── DOWNLOAD RESULTS ──
+function downloadResults(format) {
+  if (!quizState) return;
+  const catLabel = quizState.catFilter === 'all' ? 'All Categories' : quizState.catFilter;
+  const correct = quizState.answers.filter(a => a.correct).length;
+  const total = quizState.answers.length;
+  const pct = Math.round(correct / total * 100);
+  const now = new Date();
+  const stamp = now.toISOString().slice(0,19).replace(/[:T]/g,'-');
+
+  const rows = quizState.answers.map(a => {
+    const q = QUESTIONS.find(x => x.id === a.id) || {};
+    return {
+      question: q.question || '',
+      yourAnswer: `${a.chosen}. ${getOpt(q, a.chosen)}`,
+      correctAnswer: `${q.answer}. ${getOpt(q, q.answer)}`,
+      result: a.correct ? 'Correct' : 'Incorrect',
+      rationale: q.rationale || '',
+      citation: q.citation || '',
+      category: q.category || ''
+    };
+  });
+
+  let content, mime, ext;
+  if (format === 'csv') {
+    const esc = s => `"${String(s).replace(/"/g,'""')}"`;
+    const header = ['Question','Your Answer','Correct Answer','Result','Category','Rationale','Citation'];
+    const lines = [header.map(esc).join(',')];
+    rows.forEach(r => {
+      lines.push([r.question, r.yourAnswer, r.correctAnswer, r.result, r.category, r.rationale, r.citation].map(esc).join(','));
+    });
+    content = lines.join('\r\n');
+    mime = 'text/csv';
+    ext = 'csv';
+  } else {
+    let text = `IRRAD8U — Session Results\n`;
+    text += `Category: ${catLabel}\n`;
+    text += `Score: ${correct}/${total} (${pct}%)\n`;
+    text += `Date: ${now.toLocaleString()}\n`;
+    text += `${'='.repeat(60)}\n\n`;
+    rows.forEach((r, i) => {
+      text += `Q${i+1}. [${r.category}] ${r.question}\n\n`;
+      text += `Your answer: ${r.yourAnswer}\n`;
+      text += `Correct answer: ${r.correctAnswer}\n`;
+      text += `Result: ${r.result}\n\n`;
+      text += `Rationale: ${r.rationale}\n`;
+      if (r.citation) text += `Citation: ${r.citation}\n`;
+      text += `\n${'-'.repeat(60)}\n\n`;
+    });
+    content = text;
+    mime = 'text/plain';
+    ext = 'txt';
+  }
+
+  const blob = new Blob([content], { type: mime + ';charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `irrad8u-results-${stamp}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ── INIT ──
