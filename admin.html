@@ -83,6 +83,14 @@ tbody td{padding:10px 14px;vertical-align:top;font-size:13px}
 .flag-note{font-size:13px;color:#a0aec0;background:#0d0f14;border-radius:4px;padding:10px;margin-bottom:10px;line-height:1.5}
 .flag-cat{font-size:11px;color:#7c6af5}
 
+/* FEEDBACK (thumbs) */
+.fb-up{color:#48bb78;font-family:monospace;font-weight:700}
+.fb-down{color:#fc8181;font-family:monospace;font-weight:700}
+.fb-net{font-family:monospace;font-weight:700}
+.fb-net.pos{color:#48bb78}
+.fb-net.neg{color:#fc8181}
+.fb-net.zero{color:#718096}
+
 /* ADD QUESTION FORM */
 .add-form{background:#151820;border:1px solid #252a3a;border-radius:10px;padding:24px;max-width:700px}
 .add-form h3{font-size:15px;font-weight:600;margin-bottom:20px}
@@ -126,6 +134,7 @@ tbody td{padding:10px 14px;vertical-align:top;font-size:13px}
     <div class="tabs">
       <button class="tab active" onclick="showTab('questions')">Questions</button>
       <button class="tab" onclick="showTab('flags')">Flags <span id="flag-badge" style="display:none;background:#fc8181;color:#0d0f14;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px"></span></button>
+      <button class="tab" onclick="showTab('feedback')">Feedback</button>
       <button class="tab" onclick="showTab('add')">Add Question</button>
     </div>
     <button class="btn-logout" onclick="doLogout()">Log out</button>
@@ -172,6 +181,46 @@ tbody td{padding:10px 14px;vertical-align:top;font-size:13px}
   <div class="page" id="tab-flags">
     <div class="page-header"><h2>Flagged Questions</h2></div>
     <div id="flags-list"><div style="color:#718096;padding:40px 0;text-align:center">Loading...</div></div>
+  </div>
+
+  <!-- FEEDBACK (THUMBS) PAGE -->
+  <div class="page" id="tab-feedback">
+    <div class="page-header">
+      <h2>Rationale Feedback</h2>
+      <div class="stats-row" style="margin:0">
+        <div class="stat-pill"><div class="val" id="fb-stat-total">—</div><div class="lbl">Questions rated</div></div>
+        <div class="stat-pill"><div class="val" id="fb-stat-votes">—</div><div class="lbl">Total votes</div></div>
+        <div class="stat-pill"><div class="val" id="fb-stat-negative">—</div><div class="lbl">Net negative</div></div>
+      </div>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="fb-search" placeholder="Search questions..." oninput="renderFeedback()">
+      <select id="fb-cat-filter" onchange="renderFeedback()">
+        <option value="">All categories</option>
+      </select>
+      <select id="fb-sort" onchange="renderFeedback()">
+        <option value="net-asc">Worst rated first (net score)</option>
+        <option value="total-desc">Most votes first</option>
+        <option value="down-desc">Most downvotes first</option>
+        <option value="up-desc">Most upvotes first</option>
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Question</th>
+            <th>Category</th>
+            <th>👍</th>
+            <th>👎</th>
+            <th>Net</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="fb-tbody"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- ADD QUESTION PAGE -->
@@ -265,6 +314,7 @@ tbody td{padding:10px 14px;vertical-align:top;font-size:13px}
 <script>
 const ADMIN_PW = sessionStorage.getItem('irrad8u_admin');
 let allQuestions = [];
+let allFeedback = [];
 
 function doAdminLogin() {
   const pw = document.getElementById('admin-pw').value;
@@ -326,6 +376,7 @@ async function initAdmin(pw) {
     buildCatFilter();
     renderQuestions();
     loadFlags();
+    loadFeedback();
     // Force correct stat from actual array count
     document.getElementById('stat-total').textContent = data.length;
     document.getElementById('stat-hidden').textContent = data.filter(q=>q.is_hidden).length;
@@ -341,6 +392,12 @@ function buildCatFilter() {
     const o = document.createElement('option');
     o.value = c; o.textContent = c;
     sel.appendChild(o);
+  });
+  const fbSel = document.getElementById('fb-cat-filter');
+  cats.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    fbSel.appendChild(o);
   });
 }
 
@@ -486,17 +543,69 @@ async function resolveFlag(id, btn) {
 
 function openEditFromFlag(qid) {
   if (!qid) return;
-  // Switch to questions tab
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', i === 0);
-  });
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-questions').classList.add('active');
-  // Find question by id (handle string/int mismatch)
+  showTab('questions');
   const numId = parseInt(qid);
   const q = allQuestions.find(x => x.id === numId || x.id === qid);
   if (!q) { alert('Question ID ' + qid + ' not found in loaded questions.'); return; }
   setTimeout(() => openEdit(q.id), 150);
+}
+
+// ── FEEDBACK (THUMBS UP/DOWN) TAB ──
+async function loadFeedback() {
+  const data = await api('GET', 'feedback');
+  if (!data) return;
+  allFeedback = data;
+  const totalVotes = data.reduce((sum, r) => sum + r.total, 0);
+  const negCount = data.filter(r => r.net < 0).length;
+  document.getElementById('fb-stat-total').textContent = data.length;
+  document.getElementById('fb-stat-votes').textContent = totalVotes;
+  document.getElementById('fb-stat-negative').textContent = negCount;
+  renderFeedback();
+}
+
+function renderFeedback() {
+  const search = document.getElementById('fb-search').value.toLowerCase();
+  const cat = document.getElementById('fb-cat-filter').value;
+  const sort = document.getElementById('fb-sort').value;
+
+  let filtered = allFeedback.filter(r => {
+    if (search && !r.question.toLowerCase().includes(search)) return false;
+    if (cat && r.category !== cat) return false;
+    return true;
+  });
+
+  filtered = [...filtered].sort((a, b) => {
+    if (sort === 'net-asc') return (a.net - b.net) || (b.total - a.total);
+    if (sort === 'total-desc') return b.total - a.total;
+    if (sort === 'down-desc') return b.down - a.down;
+    if (sort === 'up-desc') return b.up - a.up;
+    return 0;
+  });
+
+  const tbody = document.getElementById('fb-tbody');
+  tbody.innerHTML = '';
+  filtered.forEach(r => {
+    const netClass = r.net > 0 ? 'pos' : r.net < 0 ? 'neg' : 'zero';
+    const netDisplay = r.net > 0 ? `+${r.net}` : r.net;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-family:monospace;color:#4a5568">${r.question_id}</td>
+      <td class="q-text">${r.question.substring(0,120)}${r.question.length>120?'…':''}</td>
+      <td><span class="q-cat">${r.category}</span></td>
+      <td class="fb-up">${r.up}</td>
+      <td class="fb-down">${r.down}</td>
+      <td class="fb-net ${netClass}">${netDisplay}</td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-ghost btn-sm" onclick="openEditFromFlag(${r.question_id})">Edit question</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#4a5568">No feedback votes yet</td></tr>`;
+  }
 }
 
 async function addQuestion() {
@@ -531,7 +640,7 @@ async function addQuestion() {
 
 function showTab(name) {
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['questions','flags','add'][i] === name);
+    t.classList.toggle('active', ['questions','flags','feedback','add'][i] === name);
   });
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
