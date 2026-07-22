@@ -288,6 +288,7 @@ body{font-family:var(--sans);background:#0d0f14;color:#e2e8f0;min-height:100vh}
 
 <!-- APP -->
 <div id="app">
+  <canvas id="fireworks-canvas" style="display:none;position:fixed;inset:0;pointer-events:none;z-index:9999"></canvas>
   <nav class="app-nav">
     <div class="nav-logo">RO Question Bank</div>
     <div class="nav-links">
@@ -715,6 +716,7 @@ async function endQuiz() {
     rl.appendChild(div);
   });
   showPage('results');
+  triggerFireworks(pct);
   if (!currentUser?.guest) renderDashboard();
 }
 
@@ -990,6 +992,81 @@ function downloadResults(format) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// ── FIREWORKS (completion celebration) ──
+let fireworksAnimId = null;
+
+function triggerFireworks(pct) {
+  const canvas = document.getElementById('fireworks-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.display = 'block';
+
+  // More bursts for a higher score, but always at least a couple so completion always feels rewarding
+  const burstCount = pct >= 90 ? 6 : pct >= 75 ? 4 : pct >= 50 ? 3 : 2;
+  const colors = ['#4fd1c5','#7c6af5','#48bb78','#ed8936','#fc8181','#f6c90e'];
+  let particles = [];
+
+  function spawnBurst(x, y) {
+    const count = 60;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count;
+      const speed = 2 + Math.random() * 4;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        alpha: 1,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        size: 2 + Math.random() * 2
+      });
+    }
+  }
+
+  for (let b = 0; b < burstCount; b++) {
+    setTimeout(() => {
+      const x = canvas.width * (0.2 + Math.random() * 0.6);
+      const y = canvas.height * (0.2 + Math.random() * 0.35);
+      spawnBurst(x, y);
+    }, b * 350);
+  }
+
+  const gravity = 0.05;
+  const startTime = Date.now();
+  const maxDuration = burstCount * 350 + 2200;
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.vy += gravity;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.alpha -= 0.012;
+      if (p.alpha > 0) {
+        ctx.globalAlpha = Math.max(p.alpha, 0);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+    ctx.globalAlpha = 1;
+    particles = particles.filter(p => p.alpha > 0);
+
+    if (Date.now() - startTime < maxDuration || particles.length > 0) {
+      fireworksAnimId = requestAnimationFrame(animate);
+    } else {
+      canvas.style.display = 'none';
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      fireworksAnimId = null;
+    }
+  }
+
+  if (fireworksAnimId) cancelAnimationFrame(fireworksAnimId);
+  animate();
 }
 
 // ── INIT ──
