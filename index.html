@@ -198,6 +198,69 @@ body{font-family:var(--sans);background:#0d0f14;color:#e2e8f0;min-height:100vh}
 }
 @media(max-width:600px){.start-options{grid-template-columns:1fr}.quiz-header{flex-direction:column;align-items:flex-start;gap:8px}}
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "EducationalOrganization",
+      "@id": "https://www.irrad8u.com/#organization",
+      "name": "irrad8u",
+      "url": "https://www.irrad8u.com/",
+      "description": "A live radiation oncology board exam question bank and quiz platform for radiation oncology residents, students, and attendings.",
+      "sameAs": [
+        "https://x.com/Irrad8u"
+      ]
+    },
+    {
+      "@type": "Course",
+      "@id": "https://www.irrad8u.com/#course",
+      "name": "Radiation Oncology Question Bank",
+      "description": "A radiation oncology board exam question bank with detailed, evidence-based rationales, built for ACR TXIT (in-training exam), ABR written boards, and MOC preparation. Covers 15 clinical domains including breast, CNS, GI, genitourinary, gynecologic, head and neck, radiobiology, and statistics.",
+      "provider": {
+        "@id": "https://www.irrad8u.com/#organization"
+      },
+      "educationalLevel": "Graduate medical education",
+      "audience": {
+        "@type": "EducationalAudience",
+        "educationalRole": "Physician / Resident"
+      },
+      "hasCourseInstance": {
+        "@type": "CourseInstance",
+        "courseMode": "online",
+        "courseWorkload": "Self-paced"
+      },
+      "about": [
+        "Radiation Oncology",
+        "ABR Written Boards",
+        "ACR TXIT",
+        "Maintenance of Certification"
+      ]
+    },
+    {
+      "@type": "Quiz",
+      "@id": "https://www.irrad8u.com/#quiz",
+      "name": "Radiation Oncology Practice Questions",
+      "description": "Practice quizzes covering 15 radiation oncology clinical domains with instant feedback, detailed rationales, and citations.",
+      "about": {
+        "@id": "https://www.irrad8u.com/#course"
+      },
+      "isAccessibleForFree": true,
+      "educationalUse": "Practice assessment",
+      "assesses": "Radiation Oncology clinical knowledge"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.irrad8u.com/#website",
+      "url": "https://www.irrad8u.com/",
+      "name": "irrad8u — Radiation Oncology Question Bank",
+      "publisher": {
+        "@id": "https://www.irrad8u.com/#organization"
+      }
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
