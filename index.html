@@ -690,6 +690,23 @@ function renderQuestion() {
   document.getElementById('quiz-progress-text').textContent = `Question ${idx+1}`;
   document.getElementById('quiz-cat-badge').textContent = q.category;
   document.getElementById('progress-fill').style.width = (idx/total*100)+'%';
+
+  // Conditionally render question image
+  let imgEl = document.getElementById('q-image');
+  if (q.image_url) {
+    if (!imgEl) {
+      imgEl = document.createElement('img');
+      imgEl.id = 'q-image';
+      imgEl.style.cssText = 'max-width:100%;border-radius:8px;margin-bottom:18px;display:block';
+      document.querySelector('.question-card').insertBefore(imgEl, document.getElementById('q-text'));
+    }
+    imgEl.src = q.image_url;
+    imgEl.alt = 'Question image';
+    imgEl.style.display = 'block';
+  } else if (imgEl) {
+    imgEl.style.display = 'none';
+  }
+
   document.getElementById('q-text').textContent = q.question;
   document.getElementById('btn-next').disabled = true;
   document.getElementById('btn-flag').style.display = currentUser?.guest ? 'none' : 'inline-block';

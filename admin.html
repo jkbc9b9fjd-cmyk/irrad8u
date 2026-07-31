@@ -266,6 +266,7 @@ tbody td{padding:10px 14px;vertical-align:top;font-size:13px}
       </div>
       <div class="field"><label>Rationale</label><textarea id="a-rationale" rows="4" placeholder="Explanation..."></textarea></div>
       <div class="field"><label>Citation</label><input type="text" id="a-citation" placeholder="Author et al. Journal. Year."></div>
+      <div class="field"><label>Image URL (optional)</label><input type="text" id="a-image-url" placeholder="https://..."></div>
       <button class="btn btn-primary" onclick="addQuestion()">Add question</button>
     </div>
   </div>
@@ -303,6 +304,7 @@ tbody td{padding:10px 14px;vertical-align:top;font-size:13px}
     </div>
     <div class="field"><label>Rationale</label><textarea id="e-rationale" rows="4"></textarea></div>
     <div class="field"><label>Citation</label><input type="text" id="e-citation"></div>
+    <div class="field"><label>Image URL (optional)</label><input type="text" id="e-image-url"></div>
     <div style="display:flex;gap:10px;margin-top:4px">
       <button class="btn btn-primary" onclick="saveEdit()">Save changes</button>
       <button class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
@@ -478,6 +480,7 @@ function openEdit(id) {
   document.getElementById('e-answer').value = q.answer || 'A';
   document.getElementById('e-rationale').value = q.rationale || '';
   document.getElementById('e-citation').value = q.citation || '';
+  document.getElementById('e-image-url').value = q.image_url || '';
   document.getElementById('edit-msg').textContent = '';
   document.getElementById('edit-modal').classList.add('open');
 }
@@ -497,6 +500,7 @@ async function saveEdit() {
     answer: document.getElementById('e-answer').value,
     rationale: document.getElementById('e-rationale').value,
     citation: document.getElementById('e-citation').value,
+    image_url: document.getElementById('e-image-url').value.trim() || null,
   };
   const res = await api('PATCH', 'edit', fields);
   if (res && res.ok) {
@@ -619,6 +623,7 @@ async function addQuestion() {
     answer: document.getElementById('a-answer').value,
     rationale: document.getElementById('a-rationale').value.trim(),
     citation: document.getElementById('a-citation').value.trim(),
+    image_url: document.getElementById('a-image-url').value.trim() || null,
   };
   const msg = document.getElementById('add-msg');
   if (!q.question || !q.category || !q.answer) {
@@ -629,7 +634,7 @@ async function addQuestion() {
   if (res && res.id) {
     allQuestions.push(res);
     msg.innerHTML = '<div class="msg ok">Question added successfully.</div>';
-    ['a-question','a-opt-a','a-opt-b','a-opt-c','a-opt-d','a-rationale','a-citation'].forEach(id => document.getElementById(id).value = '');
+    ['a-question','a-opt-a','a-opt-b','a-opt-c','a-opt-d','a-rationale','a-citation','a-image-url'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('a-category').value = '';
     document.getElementById('a-answer').value = '';
     setTimeout(() => msg.innerHTML = '', 3000);
