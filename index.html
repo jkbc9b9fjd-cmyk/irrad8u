@@ -802,7 +802,15 @@ async function endQuiz() {
         <div class="review-ans"><span class="lbl">Correct answer: </span><span class="correct-ans">${q.answer}. ${getOpt(q,q.answer)}</span></div>
         ${!a.correct?`<div class="review-ans"><span class="lbl">Your answer: </span><span class="your-ans">${a.chosen}. ${getOpt(q,a.chosen)}</span></div>`:''}
         <div class="review-rationale">${q.rationale||''}<br><br><em style="color:#4a5568;font-size:12px">${q.citation||''}</em></div>
-        <button onclick="toggleBookmarkById(${q.id}, this)" class="btn-bookmark" style="margin-top:10px;font-size:12px;padding:5px 10px" id="bm-${q.id}">${userBookmarks.has(q.id)?'★ Bookmarked':'☆ Bookmark'}</button>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button onclick="toggleBookmarkById(${q.id}, this)" class="btn-bookmark" style="font-size:12px;padding:5px 10px" id="bm-${q.id}">${userBookmarks.has(q.id)?'★ Bookmarked':'☆ Bookmark'}</button>
+          ${!currentUser?.guest ? `
+          <div class="rationale-feedback" style="border-top:none;margin-top:0;padding-top:0">
+            <span class="rf-label">Rationale helpful?</span>
+            <button class="rf-btn ${userFeedback[q.id]==='up'?'active-up':''}" id="rf-review-up-${q.id}" onclick="voteRationaleReview(${q.id},'up',this)">&#128077;</button>
+            <button class="rf-btn ${userFeedback[q.id]==='down'?'active-down':''}" id="rf-review-down-${q.id}" onclick="voteRationaleReview(${q.id},'down',this)">&#128078;</button>
+          </div>` : ''}
+        </div>
       </div>`;
     rl.appendChild(div);
   });
@@ -998,6 +1006,28 @@ function updateRationaleFeedbackUI() {
   const vote = userFeedback[q.id];
   document.getElementById('rf-up').classList.toggle('active-up', vote === 'up');
   document.getElementById('rf-down').classList.toggle('active-down', vote === 'down');
+}
+
+async function voteRationaleReview(qid, vote, btn) {
+  if (!currentUser || currentUser.guest) return;
+  const current = userFeedback[qid];
+  const upBtn = document.getElementById(`rf-review-up-${qid}`);
+  const downBtn = document.getElementById(`rf-review-down-${qid}`);
+  try {
+    if (current === vote) {
+      await fetch(`/api/feedback?user_id=${currentUser.id}&question_id=${qid}`, { method: 'DELETE' });
+      delete userFeedback[qid];
+    } else {
+      await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: currentUser.id, question_id: qid, vote })
+      });
+      userFeedback[qid] = vote;
+    }
+    if (upBtn) upBtn.classList.toggle('active-up', userFeedback[qid] === 'up');
+    if (downBtn) downBtn.classList.toggle('active-down', userFeedback[qid] === 'down');
+  } catch(e) { console.warn('Feedback vote failed:', e.message); }
 }
 
 async function voteRationale(vote) {
