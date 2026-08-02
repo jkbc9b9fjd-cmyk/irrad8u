@@ -305,9 +305,12 @@ tbody td{padding:10px 14px;vertical-align:top;font-size:13px}
     <div class="field"><label>Rationale</label><textarea id="e-rationale" rows="4"></textarea></div>
     <div class="field"><label>Citation</label><input type="text" id="e-citation"></div>
     <div class="field"><label>Image URL (optional)</label><input type="text" id="e-image-url"></div>
-    <div style="display:flex;gap:10px;margin-top:4px">
-      <button class="btn btn-primary" onclick="saveEdit()">Save changes</button>
-      <button class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
+    <div style="display:flex;gap:10px;margin-top:4px;justify-content:space-between">
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="saveEdit()">Save changes</button>
+        <button class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
+      </div>
+      <button class="btn btn-danger" onclick="deleteFromEdit()">Delete question</button>
     </div>
     <div id="edit-msg" style="margin-top:10px"></div>
   </div>
@@ -486,6 +489,24 @@ function openEdit(id) {
 }
 
 function closeEdit() { document.getElementById('edit-modal').classList.remove('open'); }
+
+async function deleteFromEdit() {
+  const id = parseInt(document.getElementById('e-id').value);
+  if (!id) return;
+  if (!confirm('Permanently delete this question? This cannot be undone.')) return;
+  const res = await fetch(`/api/admin?action=delete&id=${id}`, {
+    method: 'DELETE',
+    headers: { 'x-admin-token': sessionStorage.getItem('irrad8u_admin') }
+  });
+  const data = await res.json();
+  if (data.ok) {
+    allQuestions = allQuestions.filter(q => q.id !== id);
+    closeEdit();
+    renderQuestions();
+  } else {
+    document.getElementById('edit-msg').innerHTML = '<span style="color:#fc8181">Delete failed.</span>';
+  }
+}
 
 async function saveEdit() {
   const id = parseInt(document.getElementById('e-id').value);
