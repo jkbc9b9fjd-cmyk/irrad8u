@@ -454,8 +454,6 @@ body{font-family:var(--sans);background:#0d0f14;color:#e2e8f0;min-height:100vh}
     <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap">
       <button class="btn-next" onclick="showPage('dashboard')">Back to dashboard</button>
       <button class="btn-sec" onclick="showPage('quiz-setup')">New session</button>
-      <button class="btn-download" onclick="downloadResults('txt')">&#8681; Download as text</button>
-      <button class="btn-download" onclick="downloadResults('csv')">&#8681; Download as CSV</button>
     </div>
     <p class="section-title">Answers &amp; explanations</p>
     <div class="review-list" id="review-list"></div>
@@ -1051,70 +1049,6 @@ async function voteRationale(vote) {
   } catch(e) { console.warn('Feedback vote failed:', e.message); }
 }
 
-// ── DOWNLOAD RESULTS ──
-function downloadResults(format) {
-  if (!quizState) return;
-  const catLabel = quizState.catFilter === 'all' ? 'All Categories' : quizState.catFilter;
-  const correct = quizState.answers.filter(a => a.correct).length;
-  const total = quizState.answers.length;
-  const pct = Math.round(correct / total * 100);
-  const now = new Date();
-  const stamp = now.toISOString().slice(0,19).replace(/[:T]/g,'-');
-
-  const rows = quizState.answers.map(a => {
-    const q = QUESTIONS.find(x => x.id === a.id) || {};
-    return {
-      question: q.question || '',
-      yourAnswer: `${a.chosen}. ${getOpt(q, a.chosen)}`,
-      correctAnswer: `${q.answer}. ${getOpt(q, q.answer)}`,
-      result: a.correct ? 'Correct' : 'Incorrect',
-      rationale: q.rationale || '',
-      citation: q.citation || '',
-      category: q.category || ''
-    };
-  });
-
-  let content, mime, ext;
-  if (format === 'csv') {
-    const esc = s => `"${String(s).replace(/"/g,'""')}"`;
-    const header = ['Question','Your Answer','Correct Answer','Result','Category','Rationale','Citation'];
-    const lines = [header.map(esc).join(',')];
-    rows.forEach(r => {
-      lines.push([r.question, r.yourAnswer, r.correctAnswer, r.result, r.category, r.rationale, r.citation].map(esc).join(','));
-    });
-    content = lines.join('\r\n');
-    mime = 'text/csv';
-    ext = 'csv';
-  } else {
-    let text = `IRRAD8U — Session Results\n`;
-    text += `Category: ${catLabel}\n`;
-    text += `Score: ${correct}/${total} (${pct}%)\n`;
-    text += `Date: ${now.toLocaleString()}\n`;
-    text += `${'='.repeat(60)}\n\n`;
-    rows.forEach((r, i) => {
-      text += `Q${i+1}. [${r.category}] ${r.question}\n\n`;
-      text += `Your answer: ${r.yourAnswer}\n`;
-      text += `Correct answer: ${r.correctAnswer}\n`;
-      text += `Result: ${r.result}\n\n`;
-      text += `Rationale: ${r.rationale}\n`;
-      if (r.citation) text += `Citation: ${r.citation}\n`;
-      text += `\n${'-'.repeat(60)}\n\n`;
-    });
-    content = text;
-    mime = 'text/plain';
-    ext = 'txt';
-  }
-
-  const blob = new Blob([content], { type: mime + ';charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `irrad8u-results-${stamp}.${ext}`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
 
 // ── FIREWORKS (completion celebration) ──
 let fireworksAnimId = null;
