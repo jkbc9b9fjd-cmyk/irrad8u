@@ -623,6 +623,7 @@ function renderFeedback() {
       <td>
         <div class="actions">
           <button class="btn btn-ghost btn-sm" onclick="openEditFromFlag(${r.question_id})">Edit question</button>
+          <button class="btn btn-danger btn-sm" onclick="clearFeedback(${r.question_id}, this)">Clear votes</button>
         </div>
       </td>`;
     tbody.appendChild(tr);
@@ -630,6 +631,26 @@ function renderFeedback() {
 
   if (!filtered.length) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:#4a5568">No feedback votes yet</td></tr>`;
+  }
+}
+
+async function clearFeedback(qid, btn) {
+  if (!confirm('Clear all thumbs up/down votes for this question? This cannot be undone.')) return;
+  btn.disabled = true;
+  const res = await fetch(`/api/admin?action=clear-feedback&question_id=${qid}`, {
+    method: 'DELETE',
+    headers: { 'x-admin-token': sessionStorage.getItem('irrad8u_admin') }
+  });
+  const data = await res.json();
+  if (data.ok) {
+    allFeedback = allFeedback.filter(r => r.question_id !== qid);
+    document.getElementById('fb-stat-total').textContent = allFeedback.length;
+    document.getElementById('fb-stat-votes').textContent = allFeedback.reduce((sum,r)=>sum+r.total,0);
+    document.getElementById('fb-stat-negative').textContent = allFeedback.filter(r=>r.net<0).length;
+    renderFeedback();
+  } else {
+    alert('Failed to clear votes: ' + JSON.stringify(data));
+    btn.disabled = false;
   }
 }
 
