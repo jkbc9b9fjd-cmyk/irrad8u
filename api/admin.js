@@ -180,5 +180,13 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
+  if (req.method === 'DELETE' && action === 'clear-feedback') {
+    const qid = req.query.question_id || (req.body && req.body.question_id);
+    if (!qid) return res.status(400).json({ error: 'Missing question_id' });
+    const r = await sbFetch(`feedback?question_id=eq.${qid}`, 'DELETE');
+    if (!r.ok) return res.status(500).json({ error: r.data });
+    return res.status(200).json({ ok: true });
+  }
+
   return res.status(400).json({ error: 'Unknown action' });
 };
