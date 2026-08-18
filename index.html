@@ -431,7 +431,7 @@ body{font-family:var(--sans);background:#0d0f14;color:#e2e8f0;min-height:100vh}
       <div class="exp-text" id="exp-text"></div>
       <div class="exp-citation" id="exp-citation"></div>
       <div class="rationale-feedback" id="rationale-feedback" style="display:none">
-        <span class="rf-label">Was this rationale helpful?</span>
+        <span class="rf-label">Was this question helpful?</span>
         <button class="rf-btn" id="rf-up" onclick="voteRationale('up')">&#128077;</button>
         <button class="rf-btn" id="rf-down" onclick="voteRationale('down')">&#128078;</button>
       </div>
@@ -805,7 +805,7 @@ async function endQuiz() {
           <button onclick="toggleBookmarkById(${q.id}, this)" class="btn-bookmark" style="font-size:12px;padding:5px 10px" id="bm-${q.id}">${userBookmarks.has(q.id)?'★ Bookmarked':'☆ Bookmark'}</button>
           ${!currentUser?.guest ? `
           <div class="rationale-feedback" style="border-top:none;margin-top:0;padding-top:0">
-            <span class="rf-label">Rationale helpful?</span>
+            <span class="rf-label">Question helpful?</span>
             <button class="rf-btn ${userFeedback[q.id]==='up'?'active-up':''}" id="rf-review-up-${q.id}" onclick="voteRationaleReview(${q.id},'up',this)">&#128077;</button>
             <button class="rf-btn ${userFeedback[q.id]==='down'?'active-down':''}" id="rf-review-down-${q.id}" onclick="voteRationaleReview(${q.id},'down',this)">&#128078;</button>
           </div>` : ''}
